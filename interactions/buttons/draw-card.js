@@ -1,6 +1,6 @@
 const discord = require("discord.js");
 const { cardData } = require("../../logic/card");
-const { deckInstanceData } = require("../../logic/deck-instance");
+const { deckInstanceData, replyAndTrackInstanceMessage } = require("../../logic/deck-instance");
 
 /**
  * @param {discord.ButtonInteraction} interaction
@@ -26,9 +26,8 @@ async function execute(interaction) {
 
 	const card = remaining[Math.floor(Math.random() * remaining.length)];
 	instance.drawnCardIds.push(cardData.getId(card));
-	deckInstanceData.write(namespace, instance);
 
-	return interaction.reply({
+	return replyAndTrackInstanceMessage(interaction, namespace, instance, {
 		content: `${interaction.user} drew a card!`,
 		embeds: [cardData.formatFull(card)],
 		files: cardData.getAttachments(card),

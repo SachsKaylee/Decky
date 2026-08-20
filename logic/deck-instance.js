@@ -12,6 +12,8 @@ const db = require("../db");
  * @property {string} creatorId The ID of the user who created this instance.
  * @property {"public" | "private"} visibility Who is allowed to draw from this instance.
  * @property {string[]} drawnCardIds IDs of cards already drawn from this instance.
+ * @property {boolean} compactDrawing If enabled, the previous draw/reshuffle message is deleted each time a new one is sent.
+ * @property {string?} lastMessageId The ID of the last draw/reshuffle message sent for this instance.
  */
 
 /**
@@ -29,9 +31,10 @@ module.exports.deckInstanceData = deckInstanceData;
  * @param {discord.User} creator The creator.
  * @param {string} deckId The deck to spawn an instance of.
  * @param {"public" | "private"} visibility Who is allowed to draw from this instance.
+ * @param {boolean} compactDrawing If enabled, the previous draw/reshuffle message is deleted each time a new one is sent.
  * @returns {DeckInstanceData}
  */
-function createDeckInstance(guild, creator, deckId, visibility) {
+function createDeckInstance(guild, creator, deckId, visibility, compactDrawing) {
 	return {
 		id: db.dbId(),
 		guild: guilds.getGuildInfo(guild),
@@ -39,9 +42,33 @@ function createDeckInstance(guild, creator, deckId, visibility) {
 		creatorId: creator.id,
 		visibility,
 		drawnCardIds: [],
+		compactDrawing,
+		lastMessageId: null,
 	};
 }
 module.exports.createDeckInstance = createDeckInstance;
+
+/**
+ * Replies to a draw/reshuffle button interaction and persists the instance's new state.
+ * If `compactDrawing` is enabled, the previously tracked message (from the last draw or
+ * reshuffle) is deleted once the new one is sent, keeping only the latest visible.
+ * @param {discord.ButtonInteraction} interaction The interaction to reply to.
+ * @param {{ guildId: string }} namespace The namespace to persist the instance under.
+ * @param {DeckInstanceData} instance The instance, with its new state already applied (not yet written).
+ * @param {discord.BaseMessageOptions} replyOptions The reply content.
+ */
+async function replyAndTrackInstanceMessage(interaction, namespace, instance, replyOptions) {
+	const response = await interaction.reply({ ...replyOptions, withResponse: true });
+	const newMessageId = response.resource?.message?.id ?? null;
+
+	if (instance.compactDrawing && instance.lastMessageId && instance.lastMessageId !== newMessageId) {
+		await interaction.channel?.messages.delete(instance.lastMessageId).catch(() => { });
+	}
+
+	instance.lastMessageId = newMessageId;
+	deckInstanceData.write(namespace, instance);
+}
+module.exports.replyAndTrackInstanceMessage = replyAndTrackInstanceMessage;
 
 /**
  * Builds the message content for a deck instance's "show" message.

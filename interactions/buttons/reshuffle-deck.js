@@ -1,5 +1,5 @@
 const discord = require("discord.js");
-const { deckInstanceData } = require("../../logic/deck-instance");
+const { deckInstanceData, replyAndTrackInstanceMessage } = require("../../logic/deck-instance");
 
 /**
  * @param {discord.ButtonInteraction} interaction
@@ -23,9 +23,8 @@ async function execute(interaction) {
 
 	const drawnCount = instance.drawnCardIds.length;
 	instance.drawnCardIds = [];
-	deckInstanceData.write(namespace, instance);
 
-	return interaction.reply({
+	return replyAndTrackInstanceMessage(interaction, namespace, instance, {
 		content: `🔀 ${interaction.user} reshuffled the deck! ${drawnCount} card${drawnCount !== 1 ? 's' : ''} are back in the pile.`,
 	});
 }
