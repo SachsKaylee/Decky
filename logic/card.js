@@ -1,4 +1,8 @@
+const discord = require("discord.js");
 const crud = require("../crud");
+const guilds = require("../guild");
+const db = require("../db");
+const { deckData } = require("./deck");
 
 /**
  * card data.
@@ -21,3 +25,24 @@ const cardData = crud.crudDefine({
 	formatFull: (record, template) => template().addFields({ name: record.name, value: record.description }),
 });
 module.exports.cardData = cardData;
+
+/**
+ * Creates a default card, assigned to the first available deck in the guild.
+ * @param {discord.Guild} guild The guild to create it in.
+ * @param {discord.User} creator The creator.
+ * @returns {CardData}
+ */
+function createDefaultCard(guild, creator) {
+	const decks = deckData.getAll({ guildId: guild.id });
+	if (decks.length === 0) {
+		throw new Error("Cannot create a card without a deck. Create a deck first.");
+	}
+	return {
+		id: db.dbId(),
+		name: `${creator.displayName}'s card`,
+		description: `A card in ${guild.name}.`,
+		deckId: deckData.getId(decks[0]),
+		guild: guilds.getGuildInfo(guild),
+	};
+}
+module.exports.createDefaultCard = createDefaultCard;
