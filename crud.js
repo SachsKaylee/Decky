@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const db = require("./db");
 const discord = require("discord.js");
 const { sanitizeMarkdown } = require("./fmt");
@@ -192,7 +194,7 @@ module.exports.crudDefine = crudDefine;
  * @property {(builder: discord.SlashCommandBuilder) => void} factory
  * @property {string} name The option's name, used to route autocomplete requests.
  * @property {(interaction: discord.ChatInputCommandInteraction) => any | { value?: any, errors?: string[] }} retriever
- * @property {(value: any, record: T) => void} updater
+ * @property {(value: any, record: T) => (void | Promise<void>)} updater
  * @property {boolean?} allowNullValues
  * @property {boolean?} allowRetrieverErrors
  * @property {((interaction: discord.AutocompleteInteraction) => Promise<void>)?} autocomplete Responds to an autocomplete request for this option.
@@ -332,7 +334,7 @@ function crudCommandUpdate(crudSettings) {
         const option = crudSettings.options[i];
         const value = optionsValueArray[i];
         if (value !== null || option.allowNullValues) {
-          option.updater(value, record);
+          await option.updater(value, record);
           if (!operationName) {
             operationName = 'updated';
           }
@@ -510,7 +512,53 @@ const crudCommandOption = {
         await interaction.respond(choices);
       },
     };
-  }
+  },
+  /**
+   * A file attachment option. Downloads the uploaded file to `folder`, named after the
+   * record's ID (via `crud.getId`), and stores the resulting local path under `key`.
+   * @function
+   * @template T
+   * @template N
+   * @param {{ name: string, description: string, key?: keyof T, crud: Crud<T, N>, folder: string, contentTypePrefix?: string }} crudSettings
+   * @returns {CrudCommandUpdateSettingsOption<T>}
+   */
+  simpleAttachment: function (crudSettings) {
+    if (!crudSettings.key) {
+      crudSettings.key = crudSettings.name;
+    }
+    fs.mkdirSync(crudSettings.folder, { recursive: true });
+
+    return {
+      name: crudSettings.name,
+      factory: builder => builder.addAttachmentOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
+      retriever: interaction => {
+        const attachment = interaction.options.getAttachment(crudSettings.name, false);
+        if (!attachment) {
+          return { value: null };
+        }
+        if (crudSettings.contentTypePrefix && !attachment.contentType?.startsWith(crudSettings.contentTypePrefix)) {
+          return { errors: [`\`${crudSettings.name}\`: Must be a file of type \`${crudSettings.contentTypePrefix}*\`.`] };
+        }
+        return { value: attachment };
+      },
+      updater: async (attachment, record) => {
+        const ext = path.extname(attachment.name);
+        const filePath = path.join(crudSettings.folder, `${crudSettings.crud.getId(record)}${ext}`);
+
+        const oldPath = record[crudSettings.key];
+        if (oldPath && oldPath !== filePath && fs.existsSync(oldPath)) {
+          await fs.promises.unlink(oldPath);
+        }
+
+        const response = await fetch(attachment.url);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        await fs.promises.writeFile(filePath, buffer);
+
+        record[crudSettings.key] = filePath;
+      },
+      allowRetrieverErrors: true,
+    };
+  },
 }
 module.exports.crudCommandOption = crudCommandOption;
 

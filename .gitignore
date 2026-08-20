@@ -6,3 +6,4 @@ node_modules/
 
 # Save data
 data/**/*.json
+data/files

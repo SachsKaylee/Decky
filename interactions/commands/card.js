@@ -1,4 +1,5 @@
 const crud = require("../../crud");
+const config = require("../../config");
 const { cardData, createDefaultCard } = require("../../logic/card");
 const { deckData } = require("../../logic/deck");
 
@@ -22,6 +23,14 @@ module.exports = crud.crudCommandUpdate({
 			key: "deckId",
 			fkCrud: deckData,
 			getFkNamespace: interaction => ({ guildId: interaction.guildId }),
+		}),
+		crud.crudCommandOption.simpleAttachment({
+			name: "image",
+			description: "The card's image.",
+			key: "filePath",
+			crud: cardData,
+			folder: config.DISCORD_FILE_LOCATION,
+			contentTypePrefix: "image/",
 		}),
 	],
 });
