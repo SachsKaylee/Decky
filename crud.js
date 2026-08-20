@@ -221,6 +221,7 @@ function crudCommandUpdate(crudSettings) {
     builder.addStringOption(option => {
       option.setName("id");
       option.setDescription(`Updates ${crudSettings.crud.displayNamePlural} instead of creating a new one.`);
+      option.setAutocomplete(true);
       return option;
     });
   }
@@ -349,11 +350,47 @@ function crudCommandUpdate(crudSettings) {
   }
 
   /**
+   * Suggests IDs for the "id" option, preserving the "all" and comma-separated
+   * bulk-update syntax: only the last (currently-typed) segment gets matched, and
+   * already-completed segments are carried through so picking a suggestion doesn't
+   * erase them.
+   * @param {discord.AutocompleteInteraction} interaction The autocomplete interaction.
+   */
+  async function idAutocomplete(interaction) {
+    const namespace = crudSettings.getNamespace(interaction);
+    const raw = interaction.options.getFocused();
+
+    const segments = raw.split(",");
+    const prefix = segments.slice(0, -1).map(part => part.trim()).filter(part => part);
+    const query = segments[segments.length - 1].trim().toLowerCase();
+
+    const choices = [];
+    if (prefix.length === 0 && "all".startsWith(query)) {
+      choices.push({ name: `All ${crudSettings.crud.displayNamePlural}`, value: "all" });
+    }
+
+    const records = crudSettings.crud.getAll(namespace);
+    for (const record of records) {
+      if (choices.length >= 25) break;
+      const label = crudSettings.crud.formatShort(record);
+      if (!label.toLowerCase().includes(query)) continue;
+      const value = [...prefix, crudSettings.crud.getId(record)].join(",");
+      if (value.length > 100) continue; // Discord caps autocomplete choice values at 100 chars; user can still type longer lists by hand.
+      choices.push({ name: label.slice(0, 100), value });
+    }
+
+    await interaction.respond(choices);
+  }
+
+  /**
    * Routes an autocomplete request to the focused option's handler.
    * @param {discord.AutocompleteInteraction} interaction The autocomplete interaction.
    */
   async function autocomplete(interaction) {
     const focused = interaction.options.getFocused(true);
+    if (focused.name === "id" && !crudSettings.disableUpdate) {
+      return await idAutocomplete(interaction);
+    }
     const option = crudSettings.options.find(opt => opt.name === focused.name);
     if (option && option.autocomplete) {
       await option.autocomplete(interaction);
@@ -384,7 +421,7 @@ const crudCommandOption = {
     }
 
     return {
-      name: crudSettings.key,
+      name: crudSettings.name,
       factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getString(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = value,
@@ -401,7 +438,7 @@ const crudCommandOption = {
       crudSettings.key = crudSettings.name;
     }
     return {
-      name: crudSettings.key,
+      name: crudSettings.name,
       factory: builder => builder.addBooleanOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getBoolean(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = value,
@@ -421,7 +458,7 @@ const crudCommandOption = {
     }
 
     return {
-      name: crudSettings.key,
+      name: crudSettings.name,
       factory: builder => builder.addChannelOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getChannel(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = channels.getChannelInfo(value),
@@ -441,7 +478,7 @@ const crudCommandOption = {
     }
 
     return {
-      name: crudSettings.key,
+      name: crudSettings.name,
       factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description).setAutocomplete(!crudSettings.useString)),
       retriever: interaction => {
         const strValue = interaction.options.getString(crudSettings.name, false);
