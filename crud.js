@@ -484,7 +484,7 @@ const crudCommandOption = {
    * @template T
    * @template F
    * @template N
-   * @param {{ name: string, description: string, key?: keyof T, fkCrud: Crud<F, N>, getFkNamespace: (interaction: discord.ChatInputCommandInteraction) => N, useString?: boolean }} crudSettings 
+   * @param {{ name: string, description: string, key?: keyof T, fkCrud: Crud<F, N>, getFkNamespace: (interaction: discord.ChatInputCommandInteraction) => N, useString?: boolean, required?: boolean }} crudSettings
    * @returns {CrudCommandUpdateSettingsOption<T>}
    */
   simpleFk: function (crudSettings) {
@@ -494,7 +494,7 @@ const crudCommandOption = {
 
     return {
       name: crudSettings.name,
-      factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description).setAutocomplete(!crudSettings.useString)),
+      factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description).setAutocomplete(!crudSettings.useString).setRequired(!!crudSettings.required)),
       retriever: interaction => {
         const strValue = interaction.options.getString(crudSettings.name, false);
         if (strValue === null) {
