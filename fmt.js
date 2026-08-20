@@ -47,6 +47,34 @@ function maxLength(value, maxLength) {
 module.exports.maxLength = maxLength;
 
 /**
+ * Batches lines into chunks whose joined (newline-separated) length stays within
+ * `maxLength`, without splitting a single line across chunks. Useful for sending
+ * long lists as multiple Discord messages instead of one that overflows the limit.
+ * A single line longer than `maxLength` becomes its own oversized chunk.
+ * @param {string[]} lines The lines to batch.
+ * @param {number} maxLength The max length per chunk. Defaults to Discord's message content limit.
+ * @returns {string[]} The batched chunks.
+ */
+function batchLines(lines, maxLength = 2000) {
+  const chunks = [];
+  let current = '';
+  for (const line of lines) {
+    const candidate = current ? `${current}\n${line}` : line;
+    if (current && candidate.length > maxLength) {
+      chunks.push(current);
+      current = line;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) {
+    chunks.push(current);
+  }
+  return chunks;
+}
+module.exports.batchLines = batchLines;
+
+/**
  * Wraps the given value in a code block. Might return a single or multi line code block dependong on usage.
  * @param {any} value The value to wrap in code. If it is not a string it will be serialized.
  * @param {{maxLength?: number, language?: string, forceLine?: "single" | "multi"}?} opts Additional options for formatting.
