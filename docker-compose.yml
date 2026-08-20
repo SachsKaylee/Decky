@@ -1,6 +1,6 @@
 services:
   discorddeckbuilder:
-    image: ghcr.io/sachskaylee/discorddeckbuilder:master
+    image: ghcr.io/sachskaylee/decky:master
     volumes:
        - /root/containers/discorddeckbuilder/env:/discorddeckbuilder/.env.local
        - /root/containers/discorddeckbuilder/data:/discorddeckbuilder/data
