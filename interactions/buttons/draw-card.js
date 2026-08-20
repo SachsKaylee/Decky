@@ -1,6 +1,6 @@
 const discord = require("discord.js");
 const { cardData } = require("../../logic/card");
-const { deckInstanceData, replyAndTrackInstanceMessage } = require("../../logic/deck-instance");
+const { deckInstanceData, replyAndTrackInstanceMessage, buildInstanceButtons } = require("../../logic/deck-instance");
 
 /**
  * @param {discord.ButtonInteraction} interaction
@@ -31,6 +31,7 @@ async function execute(interaction) {
 		content: `${interaction.user} drew a card!`,
 		embeds: [cardData.formatFull(card)],
 		files: cardData.getAttachments(card),
+		components: buildInstanceButtons(instance),
 	});
 }
 

@@ -1,5 +1,5 @@
 const discord = require("discord.js");
-const { deckInstanceData, replyAndTrackInstanceMessage } = require("../../logic/deck-instance");
+const { deckInstanceData, replyAndTrackInstanceMessage, buildInstanceButtons } = require("../../logic/deck-instance");
 
 /**
  * @param {discord.ButtonInteraction} interaction
@@ -26,6 +26,7 @@ async function execute(interaction) {
 
 	return replyAndTrackInstanceMessage(interaction, namespace, instance, {
 		content: `🔀 ${interaction.user} reshuffled the deck! ${drawnCount} card${drawnCount !== 1 ? 's' : ''} are back in the pile.`,
+		components: buildInstanceButtons(instance),
 	});
 }
 

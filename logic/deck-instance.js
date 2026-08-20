@@ -71,17 +71,14 @@ async function replyAndTrackInstanceMessage(interaction, namespace, instance, re
 module.exports.replyAndTrackInstanceMessage = replyAndTrackInstanceMessage;
 
 /**
- * Builds the message content for a deck instance's "show" message.
- * @param {import("./deck").DeckData} deck The deck the instance was spawned from.
+ * Builds the draw/reshuffle button row for a deck instance. Attached to the original
+ * /show-deck message as well as every individual draw/reshuffle message, so the buttons
+ * stay usable from whichever message is still around (relevant when `compactDrawing`
+ * deletes everything but the latest one).
  * @param {DeckInstanceData} instance The deck instance.
- * @returns {{ embeds: discord.EmbedBuilder[], components: discord.ActionRowBuilder[] }}
+ * @returns {discord.ActionRowBuilder[]}
  */
-function formatDeckInstanceMessage(deck, instance) {
-	const embed = new discord.EmbedBuilder()
-		.setTitle(deck.name)
-		.setDescription(deck.description)
-		.setFooter({ text: instance.visibility === 'private' ? 'Private draw pile - only the creator can draw' : 'Public draw pile - anyone can draw' });
-
+function buildInstanceButtons(instance) {
 	const drawButton = new discord.ButtonBuilder()
 		.setCustomId(`draw-card/${instance.id}`)
 		.setLabel('Draw a card')
@@ -94,9 +91,25 @@ function formatDeckInstanceMessage(deck, instance) {
 		.setEmoji('🔀')
 		.setStyle(discord.ButtonStyle.Secondary);
 
+	return [new discord.ActionRowBuilder().addComponents(drawButton, reshuffleButton)];
+}
+module.exports.buildInstanceButtons = buildInstanceButtons;
+
+/**
+ * Builds the message content for a deck instance's "show" message.
+ * @param {import("./deck").DeckData} deck The deck the instance was spawned from.
+ * @param {DeckInstanceData} instance The deck instance.
+ * @returns {{ embeds: discord.EmbedBuilder[], components: discord.ActionRowBuilder[] }}
+ */
+function formatDeckInstanceMessage(deck, instance) {
+	const embed = new discord.EmbedBuilder()
+		.setTitle(deck.name)
+		.setDescription(deck.description)
+		.setFooter({ text: instance.visibility === 'private' ? 'Private draw pile - only the creator can draw' : 'Public draw pile - anyone can draw' });
+
 	return {
 		embeds: [embed],
-		components: [new discord.ActionRowBuilder().addComponents(drawButton, reshuffleButton)],
+		components: buildInstanceButtons(instance),
 	};
 }
 module.exports.formatDeckInstanceMessage = formatDeckInstanceMessage;
