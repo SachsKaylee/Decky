@@ -1,19 +1,35 @@
 const { dbSerialize } = require("./db");
 
 const WHITESPACE_REGEX = /\s+/g;
-const MD_REGEX = /#/g;
 
 /**
- * @param {string} value 
+ * @param {string} value
  */
 function sanitizeWhitespace(value) {
   return value.replaceAll(WHITESPACE_REGEX, ' ');
 }
 module.exports.sanitizeWhitespace = sanitizeWhitespace;
 
-
+/**
+ * Strips common Discord markdown syntax (code spans, bold/italic/underline,
+ * strikethrough, spoilers, blockquotes, headings) from a string, leaving plain text.
+ * Useful for contexts that render as plain text, like autocomplete choice labels.
+ * @param {string} value
+ * @returns {string}
+ */
 function sanitizeMarkdown(value) {
-  return value.replaceAll(MD_REGEX, ' ');
+  return value
+    .replace(/```([\s\S]*?)```/g, '$1')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/\*\*([^*]*)\*\*/g, '$1')
+    .replace(/\*([^*]*)\*/g, '$1')
+    .replace(/__([^_]*)__/g, '$1')
+    .replace(/_([^_]*)_/g, '$1')
+    .replace(/~~([^~]*)~~/g, '$1')
+    .replace(/\|\|([^|]*)\|\|/g, '$1')
+    .replace(/^>\s?/gm, '')
+    .replace(/#/g, ' ')
+    .trim();
 }
 module.exports.sanitizeMarkdown = sanitizeMarkdown;
 

@@ -1,5 +1,6 @@
 const db = require("./db");
 const discord = require("discord.js");
+const { sanitizeMarkdown } = require("./fmt");
 
 /**
  * Deterministically derives an embed color from a string ID via FNV-1a hash -> hue.
@@ -372,7 +373,7 @@ function crudCommandUpdate(crudSettings) {
     const records = crudSettings.crud.getAll(namespace);
     for (const record of records) {
       if (choices.length >= 25) break;
-      const label = crudSettings.crud.formatShort(record);
+      const label = sanitizeMarkdown(crudSettings.crud.formatShort(record));
       if (!label.toLowerCase().includes(query)) continue;
       const value = [...prefix, crudSettings.crud.getId(record)].join(",");
       if (value.length > 100) continue; // Discord caps autocomplete choice values at 100 chars; user can still type longer lists by hand.
@@ -503,7 +504,7 @@ const crudCommandOption = {
           .filter(record => crudSettings.fkCrud.formatShort(record).toLowerCase().includes(query))
           .slice(0, 25)
           .map(record => ({
-            name: crudSettings.fkCrud.formatShort(record).slice(0, 100),
+            name: sanitizeMarkdown(crudSettings.fkCrud.formatShort(record)).slice(0, 100),
             value: crudSettings.fkCrud.getId(record),
           }));
         await interaction.respond(choices);
