@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const db = require("./db");
 const discord = require("discord.js");
-const { sanitizeMarkdown } = require("./fmt");
+const { sanitizeMarkdown, batchLines } = require("./fmt");
 
 /**
  * Deterministically derives an embed color from a string ID via FNV-1a hash -> hue.
@@ -314,10 +314,16 @@ function crudCommandUpdate(crudSettings) {
       for (const record of recordsToUpdate) {
         crudSettings.crud.delete(namespace, record);
       }
-      return interaction.reply({
-        // TODO: ISSUE: Could exceed message length
-        content: `# ${crudSettings.crud.displayName(recordsToUpdate.length)} ${operationName}\n${recordsToUpdate.map(crudSettings.crud.formatShort).map(str => `- ${str}`).join('\n')}`,
-      });
+      const deleteLines = [
+        `# ${crudSettings.crud.displayName(recordsToUpdate.length)} ${operationName}`,
+        ...recordsToUpdate.map(record => `- ${crudSettings.crud.formatShort(record)}`),
+      ];
+      const deleteBatches = batchLines(deleteLines);
+      await interaction.reply({ content: deleteBatches[0] });
+      for (const batch of deleteBatches.slice(1)) {
+        await interaction.followUp({ content: batch });
+      }
+      return;
     }
 
     // Update/Create records.
