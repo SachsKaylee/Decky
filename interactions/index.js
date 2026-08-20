@@ -1,4 +1,4 @@
-const { deployCommands, handleCommand } = require("./deploy-commands");
+const { deployCommands, handleCommand, handleAutocomplete } = require("./deploy-commands");
 const { handleButton } = require("./deploy-buttons");
 const { handleModal } = require("./deploy-modals");
 const { Interaction } = require("discord.js");
@@ -15,6 +15,10 @@ module.exports.deploy = deploy;
 async function handle(interaction) {
   if (interaction.isCommand()) {
     return await handleCommand(interaction);
+  }
+
+  if (interaction.isAutocomplete()) {
+    return await handleAutocomplete(interaction);
   }
 
   if (interaction.isButton()) {

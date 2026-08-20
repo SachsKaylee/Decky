@@ -189,10 +189,12 @@ module.exports.crudDefine = crudDefine;
  * @template T
  * @typedef {Object} CrudCommandUpdateSettingsOption
  * @property {(builder: discord.SlashCommandBuilder) => void} factory
+ * @property {string} name The option's name, used to route autocomplete requests.
  * @property {(interaction: discord.ChatInputCommandInteraction) => any | { value?: any, errors?: string[] }} retriever
  * @property {(value: any, record: T) => void} updater
  * @property {boolean?} allowNullValues
  * @property {boolean?} allowRetrieverErrors
+ * @property {((interaction: discord.AutocompleteInteraction) => Promise<void>)?} autocomplete Responds to an autocomplete request for this option.
  */
 
 /**
@@ -346,10 +348,25 @@ function crudCommandUpdate(crudSettings) {
     });
   }
 
+  /**
+   * Routes an autocomplete request to the focused option's handler.
+   * @param {discord.AutocompleteInteraction} interaction The autocomplete interaction.
+   */
+  async function autocomplete(interaction) {
+    const focused = interaction.options.getFocused(true);
+    const option = crudSettings.options.find(opt => opt.name === focused.name);
+    if (option && option.autocomplete) {
+      await option.autocomplete(interaction);
+    } else {
+      await interaction.respond([]);
+    }
+  }
+
   return {
     name: builder.name,
     data: builder,
     execute,
+    autocomplete,
   };
 }
 module.exports.crudCommandUpdate = crudCommandUpdate;
@@ -367,6 +384,7 @@ const crudCommandOption = {
     }
 
     return {
+      name: crudSettings.name,
       factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getString(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = value,
@@ -375,7 +393,7 @@ const crudCommandOption = {
   /**
    * @function
    * @template T
-   * @param {{ name: string, description: string, key?: keyof T }} crudSettings 
+   * @param {{ name: string, description: string, key?: keyof T }} crudSettings
    * @returns {CrudCommandUpdateSettingsOption<T>}
    */
   simpleBoolean: function (crudSettings) {
@@ -383,6 +401,7 @@ const crudCommandOption = {
       crudSettings.key = crudSettings.name;
     }
     return {
+      name: crudSettings.name,
       factory: builder => builder.addBooleanOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getBoolean(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = value,
@@ -402,6 +421,7 @@ const crudCommandOption = {
     }
 
     return {
+      name: crudSettings.name,
       factory: builder => builder.addChannelOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getChannel(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = channels.getChannelInfo(value),
@@ -412,7 +432,7 @@ const crudCommandOption = {
    * @template T
    * @template F
    * @template N
-   * @param {{ name: string, description: string, key?: keyof T, fkCrud: Crud<F, N>, getFkNamespace: (interaction: discord.ChatInputCommandInteraction) => N }} crudSettings 
+   * @param {{ name: string, description: string, key?: keyof T, fkCrud: Crud<F, N>, getFkNamespace: (interaction: discord.ChatInputCommandInteraction) => N, useString?: boolean }} crudSettings 
    * @returns {CrudCommandUpdateSettingsOption<T>}
    */
   simpleFk: function (crudSettings) {
@@ -421,7 +441,8 @@ const crudCommandOption = {
     }
 
     return {
-      factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
+      name: crudSettings.name,
+      factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description).setAutocomplete(!crudSettings.useString)),
       retriever: interaction => {
         const strValue = interaction.options.getString(crudSettings.name, false);
         if (strValue === null) {
@@ -437,6 +458,19 @@ const crudCommandOption = {
       },
       updater: (value, record) => record[crudSettings.key] = value,
       allowRetrieverErrors: true,
+      autocomplete: crudSettings.useString ? undefined : async interaction => {
+        const query = interaction.options.getFocused().toLowerCase();
+        const fkNamespace = crudSettings.getFkNamespace(interaction);
+        const records = crudSettings.fkCrud.getAll(fkNamespace);
+        const choices = records
+          .filter(record => crudSettings.fkCrud.formatShort(record).toLowerCase().includes(query))
+          .slice(0, 25)
+          .map(record => ({
+            name: crudSettings.fkCrud.formatShort(record).slice(0, 100),
+            value: crudSettings.fkCrud.getId(record),
+          }));
+        await interaction.respond(choices);
+      },
     };
   }
 }

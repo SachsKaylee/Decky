@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Events } = require("discord.js");
 const interactions = require("./interactions");
 const config = require("./config");
 const { deckData } = require("./logic/deck");
+const { cardData } = require("./logic/card");
 
 const client = new Client({
   intents: [
@@ -16,6 +17,7 @@ client.once(Events.ClientReady, () => {
 client.on(Events.GuildAvailable, async (guild) => {
   await interactions.deploy({ guildId: guild.id });
   deckData.register({ guildId: guild.id })
+  cardData.register({ guildId: guild.id })
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {

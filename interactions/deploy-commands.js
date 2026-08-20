@@ -1,4 +1,4 @@
-const { REST, Routes, CommandInteraction } = require("discord.js");
+const { REST, Routes, CommandInteraction, AutocompleteInteraction } = require("discord.js");
 const { commands } = require("./commands");
 const config = require("../config");
 
@@ -43,6 +43,23 @@ module.exports.handleCommand = async function handleCommand(interaction) {
     }
   } catch (error) {
     console.error('Command error:', error);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @param {AutocompleteInteraction} interaction
+ */
+module.exports.handleAutocomplete = async function handleAutocomplete(interaction) {
+  try {
+    const { commandName } = interaction;
+    if (commands[commandName] && commands[commandName].autocomplete) {
+      await commands[commandName].autocomplete(interaction);
+      return true;
+    }
+  } catch (error) {
+    console.error('Autocomplete error:', error);
     return true;
   }
   return false;
