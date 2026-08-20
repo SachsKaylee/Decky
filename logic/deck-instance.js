@@ -55,15 +55,21 @@ function formatDeckInstanceMessage(deck, instance) {
 		.setDescription(deck.description)
 		.setFooter({ text: instance.visibility === 'private' ? 'Private draw pile - only the creator can draw' : 'Public draw pile - anyone can draw' });
 
-	const button = new discord.ButtonBuilder()
+	const drawButton = new discord.ButtonBuilder()
 		.setCustomId(`draw-card/${instance.id}`)
 		.setLabel('Draw a card')
 		.setEmoji('🎴')
 		.setStyle(discord.ButtonStyle.Primary);
 
+	const reshuffleButton = new discord.ButtonBuilder()
+		.setCustomId(`reshuffle-deck/${instance.id}`)
+		.setLabel('Reshuffle')
+		.setEmoji('🔀')
+		.setStyle(discord.ButtonStyle.Secondary);
+
 	return {
 		embeds: [embed],
-		components: [new discord.ActionRowBuilder().addComponents(button)],
+		components: [new discord.ActionRowBuilder().addComponents(drawButton, reshuffleButton)],
 	};
 }
 module.exports.formatDeckInstanceMessage = formatDeckInstanceMessage;
