@@ -384,7 +384,7 @@ const crudCommandOption = {
     }
 
     return {
-      name: crudSettings.name,
+      name: crudSettings.key,
       factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getString(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = value,
@@ -401,7 +401,7 @@ const crudCommandOption = {
       crudSettings.key = crudSettings.name;
     }
     return {
-      name: crudSettings.name,
+      name: crudSettings.key,
       factory: builder => builder.addBooleanOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getBoolean(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = value,
@@ -421,7 +421,7 @@ const crudCommandOption = {
     }
 
     return {
-      name: crudSettings.name,
+      name: crudSettings.key,
       factory: builder => builder.addChannelOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description)),
       retriever: interaction => interaction.options.getChannel(crudSettings.name, false),
       updater: (value, record) => record[crudSettings.key] = channels.getChannelInfo(value),
@@ -441,7 +441,7 @@ const crudCommandOption = {
     }
 
     return {
-      name: crudSettings.name,
+      name: crudSettings.key,
       factory: builder => builder.addStringOption(option => option.setName(crudSettings.name).setDescription(crudSettings.description).setAutocomplete(!crudSettings.useString)),
       retriever: interaction => {
         const strValue = interaction.options.getString(crudSettings.name, false);
