@@ -1,0 +1,7 @@
+services:
+  discorddeckbuilder:
+    image: ghcr.io/dd-discord/discorddeckbuilder:master
+    volumes:
+       - /root/containers/discorddeckbuilder/env:/discorddeckbuilder/.env.local
+       - /root/containers/discorddeckbuilder/data:/discorddeckbuilder/data
+    restart: unless-stopped
