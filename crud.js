@@ -2,6 +2,27 @@ const db = require("./db");
 const discord = require("discord.js");
 
 /**
+ * Deterministically derives an embed color from a string ID via FNV-1a hash -> hue.
+ * @param {string} id The ID to hash.
+ * @returns {number} A 24-bit RGB color.
+ */
+function colorFromId(id) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < id.length; i++) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  const hue = (hash >>> 0) % 360;
+
+  // Fixed saturation/lightness keeps every color equally vivid and readable.
+  const s = 0.65, l = 0.55;
+  const k = n => (n + hue / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return (Math.round(f(0) * 255) << 16) + (Math.round(f(8) * 255) << 8) + Math.round(f(4) * 255);
+}
+
+/**
  * Settings to define a CRUD object.
  * @template T
  * @template N
@@ -57,7 +78,7 @@ function crudDefine(crudSettings) {
     crudSettings.formatShort = record => `\`${crudSettings.getId(record)}\``;
   }
 
-  const baseFmtFull = record => new discord.EmbedBuilder().setTitle(crudSettings.displayNameSingular).setDescription(crudSettings.formatShort(record)).setTimestamp(record.createdAt);
+  const baseFmtFull = record => new discord.EmbedBuilder().setTitle(crudSettings.displayNameSingular).setDescription(crudSettings.formatShort(record)).setColor(colorFromId(crudSettings.getId(record))).setTimestamp(record.createdAt);
 
   if (!crudSettings.formatFull) {
     crudSettings.formatFull = baseFmtFull;
