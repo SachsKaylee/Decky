@@ -13,7 +13,7 @@ const { deckData } = require("./deck");
  * @property {string} deckId The deck the card belongs to.
  * @property {string} name The card name.
  * @property {string} description The card description.
- * @property {string} filePath The local file path the image is stored under.
+ * @property {string?} filePath The local file path the image is stored under.
  */
 
 /**
@@ -24,7 +24,7 @@ const cardData = crud.crudDefine({
 	getTable: ns => [ns.guildId, 'cards'],
 	formatShort: record => `\`${record.id}\` - ${record.name}`,
 	formatFull: (record, template) => {
-		const embed = template().addFields({ name: record.name, value: record.description });
+		const embed = template().setTitle(record.name).setDescription(record.description).setFooter({ text: record.id });
 		if (record.filePath) {
 			embed.setImage(`attachment://${path.basename(record.filePath)}`);
 		}
