@@ -1,3 +1,4 @@
+const path = require("path");
 const discord = require("discord.js");
 const crud = require("../crud");
 const guilds = require("../guild");
@@ -22,7 +23,14 @@ const cardData = crud.crudDefine({
 	name: 'card',
 	getTable: ns => [ns.guildId, 'cards'],
 	formatShort: record => `\`${record.id}\` - ${record.name}`,
-	formatFull: (record, template) => template().addFields({ name: record.name, value: record.description }),
+	formatFull: (record, template) => {
+		const embed = template().addFields({ name: record.name, value: record.description });
+		if (record.filePath) {
+			embed.setImage(`attachment://${path.basename(record.filePath)}`);
+		}
+		return embed;
+	},
+	getAttachments: record => record.filePath ? [new discord.AttachmentBuilder(record.filePath, { name: path.basename(record.filePath) })] : [],
 });
 module.exports.cardData = cardData;
 

@@ -38,6 +38,7 @@ function colorFromId(id) {
  * @property {(record: T?) => T?} migrate Migrates a record.
  * @property {((record: T, template: () => discord.EmbedBuilder) => discord.EmbedBuilder)?} formatFull Formats the record as an embed.
  * @property {((record: T) => string)?} formatShort Formats the record as a single-line string.
+ * @property {((record: T) => discord.AttachmentBuilder[])?} getAttachments Gets files to send alongside the record's full embed (e.g. referenced via `attachment://name` in `formatFull`).
  */
 
 /**
@@ -87,6 +88,10 @@ function crudDefine(crudSettings) {
     crudSettings.formatFull = baseFmtFull;
   }
 
+  if (!crudSettings.getAttachments) {
+    crudSettings.getAttachments = () => [];
+  }
+
   return {
     name: crudSettings.name,
     /**
@@ -109,6 +114,12 @@ function crudDefine(crudSettings) {
      * @returns {discord.EmbedBuilder} The embed.
      */
     formatFull: record => crudSettings.formatFull(record, () => baseFmtFull(record)),
+    /**
+     * Gets the files to send alongside the record's full embed.
+     * @param {T} record The record.
+     * @returns {discord.AttachmentBuilder[]} The attachments.
+     */
+    getAttachments: record => crudSettings.getAttachments(record),
     /**
      * Gets the ID of a record.
      * @param {T} record The record.
@@ -348,7 +359,8 @@ function crudCommandUpdate(crudSettings) {
     }
     return interaction.reply({
       content: `# ${crudSettings.crud.displayName(recordsToUpdate.length)} ${operationName}`,
-      embeds: recordsToUpdate.map(crudSettings.crud.formatFull)
+      embeds: recordsToUpdate.map(crudSettings.crud.formatFull),
+      files: recordsToUpdate.flatMap(crudSettings.crud.getAttachments),
     });
   }
 
